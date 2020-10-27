@@ -3,6 +3,7 @@
 use Slim\App;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Illuminate\Support\Facades\Date;
 
 return function (App $app) {
     $container = $app->getContainer();
@@ -275,6 +276,111 @@ return function (App $app) {
                return $response->withJson(["status" => "success", "message" => "Success Delete Company"], 200);
             
             return $response->withJson(["status" => "failed", "message" => "Invalid Delete Company"], 400);
+        });
+        $app->post("/close",function (Request $request, Response $response, $args){
+            $req = $request->getParsedBody();
+            
+            //get Data Company_budget
+            $sql_companyAmount  =  "SELECT amount FROM company_budget WHERE company_id=:company_id";
+            $stmt_amount = $this->db->prepare($sql_companyAmount);
+            $stmt_amount->execute([":company_id" => $req['company_id']]);
+            $result = $stmt_amount->fetch();
+
+            // create transaction
+            $sql_transaction = "INSERT INTO transaction(type,user_id,amount) VALUE(:type,:user_id,:amount)";
+            $stmt_transaction = $this->db->prepare($sql_transaction);
+            $data_transaction = [
+                ":type" => "S",
+                ":user_id" => $req["user_id"], 
+                ":amount" => $req["amount"]
+            ];
+            if($stmt_transaction->execute($data_transaction)){
+                //update company budget
+                $sql_companyBudget = "UPDATE  company_budget SET amount = :amount WHERE company_id=:company_id";
+                $stmt_updateBudget = $this->db->prepare($sql_companyBudget);
+                $total_amount = $result['amount'] + $req["amount"];
+                $data_budget = [
+                    ":company_id" => $req['company_id'],
+                    ":amount" => $total_amount,
+                ];
+                $stmt_updateBudget->execute($data_budget);
+                return $response->withJson(["status" => "success", "message" => "Transaction Success"], 200);
+            }else {
+                return $response->withJson(["status" => "failed", "message" => "Invalid Create Transaction Close"], 400);
+            }
+            
+        });
+        $app->post('/reimburse',function (Request $request, Response $response, $args){
+            $req = $request->getParsedBody();
+            
+            //get Data Company_budget
+            $sql_companyAmount  =  "SELECT amount FROM company_budget WHERE company_id=:company_id";
+            $stmt_amount = $this->db->prepare($sql_companyAmount);
+            $stmt_amount->execute([":company_id" => $req['company_id']]);
+            $result = $stmt_amount->fetch();
+
+            
+            // create transaction
+            $sql_transaction = "INSERT INTO transaction(type,user_id,amount) VALUE(:type,:user_id,:amount)";
+            $stmt_transaction = $this->db->prepare($sql_transaction);
+            $data_transaction = [
+                ":type" => "R",
+                ":user_id" => $req["user_id"], 
+                ":amount" => $req["amount"]
+            ];
+            if ($result['amount'] <= $req["amount"]) {
+                return $response->withJson(["status" => "failed", "message" => "the amount of your budget is less"], 400);
+            }
+            if($stmt_transaction->execute($data_transaction)){
+                //update company budget
+                $sql_companyBudget = "UPDATE  company_budget SET amount = :amount WHERE company_id=:company_id";
+                $stmt_updateBudget = $this->db->prepare($sql_companyBudget);
+                $total_amount = $result['amount'] - $req["amount"];
+                $data_budget = [
+                    ":company_id" => $req['company_id'],
+                    ":amount" => $total_amount,
+                ];
+                $stmt_updateBudget->execute($data_budget);
+                return $response->withJson(["status" => "success", "message" => "Transaction Success"], 200);
+            }else {
+                return $response->withJson(["status" => "failed", "message" => "Invalid Create Transaction Close"], 400);
+            }
+        });
+        $app->post('/disburse',function (Request $request, Response $response, $args){
+            $req = $request->getParsedBody();
+            
+            //get Data Company_budget
+            $sql_companyAmount  =  "SELECT amount FROM company_budget WHERE company_id=:company_id";
+            $stmt_amount = $this->db->prepare($sql_companyAmount);
+            $stmt_amount->execute([":company_id" => $req['company_id']]);
+            $result = $stmt_amount->fetch();
+
+            
+            // create transaction
+            $sql_transaction = "INSERT INTO transaction(type,user_id,amount) VALUE(:type,:user_id,:amount)";
+            $stmt_transaction = $this->db->prepare($sql_transaction);
+            $data_transaction = [
+                ":type" => "C",
+                ":user_id" => $req["user_id"], 
+                ":amount" => $req["amount"]
+            ];
+            if ($result['amount'] <= $req["amount"]) {
+                return $response->withJson(["status" => "failed", "message" => "the amount of your budget is less"], 400);
+            }
+            if($stmt_transaction->execute($data_transaction)){
+                //update company budget
+                $sql_companyBudget = "UPDATE  company_budget SET amount = :amount WHERE company_id=:company_id";
+                $stmt_updateBudget = $this->db->prepare($sql_companyBudget);
+                $total_amount = $result['amount'] - $req["amount"];
+                $data_budget = [
+                    ":company_id" => $req['company_id'],
+                    ":amount" => $total_amount,
+                ];
+                $stmt_updateBudget->execute($data_budget);
+                return $response->withJson(["status" => "success", "message" => "Transaction Success"], 200);
+            }else {
+                return $response->withJson(["status" => "failed", "message" => "Invalid Create Transaction Close"], 400);
+            }
         });
     });
    
