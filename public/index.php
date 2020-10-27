@@ -16,6 +16,7 @@ session_start();
 // Instantiate the app
 $settings = require __DIR__ . '/../src/settings.php';
 $app = new \Slim\App($settings);
+$container = $app->getContainer();
 
 // Set up dependencies
 $dependencies = require __DIR__ . '/../src/dependencies.php';
@@ -28,6 +29,8 @@ $middleware($app);
 // Register routes
 $routes = require __DIR__ . '/../src/routes.php';
 $routes($app);
+// //set up controller
+$controller = require_once __DIR__ . '/../src/routesContainers.php';
+$controller($container);
 
-// Run app
 $app->run();
