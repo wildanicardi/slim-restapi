@@ -382,6 +382,59 @@ return function (App $app) {
                 return $response->withJson(["status" => "failed", "message" => "Invalid Create Transaction Close"], 400);
             }
         });
+        $app->get('/log-transaction',function (Request $request, Response $response){
+            $sql = "SELECT  user.id ,CONCAT(user.first_name, ' ', user.last_name) AS name, transaction.type, transaction.amount,transaction.date, company.name AS company_name,user.account,company_budget.amount AS remaining_amount
+                FROM (((user
+                INNER JOIN transaction ON user.id = transaction.user_id)
+                INNER JOIN company ON user.company_id = company.id)
+                INNER JOIN company_budget ON user.company_id = company_budget.company_id)
+            ";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            $result = $stmt->fetchAll();
+            
+            if ($result) {
+                $result_response = array_map(function ($item){
+                    switch ($item["type"]) {
+                        case 'S':
+                            $type = "Close";
+                            break;
+                        case 'R':
+                            $type = "Reimburse";
+                            break;
+                        case 'C':
+                            $type = "Disburse";
+                            break;
+                        default:
+                            $type = "";
+                            break;
+                    }
+                    $data = [
+                        "user_id" => $item["id"],
+                        "Username" => $item["name"],
+                        "User Account" => $item["account"],
+                        "Company Name" => $item["company_name"],
+                        "Transaction Type" => $type,
+                        "Transaction Amount" => $item["amount"],
+                        "Remaining Amount" => $item["remaining_amount"],
+                        "Transaction Date" => $item["date"],
+                    ];
+                    return $data;
+                },$result);
+                $data = [
+                    'code' => 200,
+                    'message' => 'success',
+                    'data' => $result_response
+                ];
+            }else{
+                $data = [
+                    'code' => 404,
+                    'message' => 'data not found',
+                    'data' => null
+                ];
+            }
+            return $response->withJson($data, $data['code']);
+        });
     });
    
   
